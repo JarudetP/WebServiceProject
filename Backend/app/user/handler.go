@@ -46,14 +46,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	// TODO: Generate JWT in next iteration
-	c.JSON(http.StatusOK, gin.H{"message": "login successful", "user_id": user.ID, "username": user.Username})
-	
-	user, err := h.service.Login(&req)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
+
 	accessToken, refreshToken, err := h.service.GenerateTokenPair(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})

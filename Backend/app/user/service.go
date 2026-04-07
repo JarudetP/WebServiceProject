@@ -2,11 +2,19 @@ package user
 
 import (
 	"errors"
+	"time"
+	"os"
 
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
-var jwtSecret = []byte("your_access_secret")
-var refreshSecret = []byte("your_refresh_secret")
+func getSecret() []byte{
+	return []byte(os.Getenv("JWT_SECRET"))
+}
+func getRefresh() []byte{
+	return  []byte(os.Getenv("REFRESH_SECRET"))
+}
+
 
 type Service struct {
 	repo *Repository
@@ -61,7 +69,7 @@ func (s *Service) GenerateTokenPair(user *User) (string, string, error) {
 			Issuer:    "travel-api",
 		},
 	}
-	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString(jwtSecret)
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString(getSecret())
 	if err != nil {
 		return "", "", err
 	}
@@ -77,7 +85,7 @@ func (s *Service) GenerateTokenPair(user *User) (string, string, error) {
 			Issuer:    "travel-api",
 		},
 	}
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(refreshSecret)
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(getRefresh())
 	if err != nil {
 		return "", "", err
 	}
@@ -86,7 +94,7 @@ func (s *Service) GenerateTokenPair(user *User) (string, string, error) {
 }
 func (s *Service) RefreshToken(tokenString string) (string, string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return refreshSecret, nil
+		return getRefresh(), nil
 	})
 
 	if err != nil || !token.Valid {
@@ -98,7 +106,9 @@ func (s *Service) RefreshToken(tokenString string) (string, string, error) {
 		return "", "", errors.New("invalid token claims")
 	}
 
-	// สร้าง user จำลองเพื่อส่งไป Gen Token ใหม่ (หรือจะ query จาก DB ใหม่ก็ได้เพื่อความชัวร์)
-	user := &User{ID: claims.UserID, Username: claims.Username}
+	user,err := s.repo.FindByID(claims.UserID)
+	if err != nil {
+		return "", "", errors.New("User Not Found")
+	}
 	return s.GenerateTokenPair(user)
 }
