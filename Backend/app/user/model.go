@@ -1,6 +1,7 @@
 package user
 
 import "time"
+import "github.com/golang-jwt/jwt/v5"
 
 type User struct {
 	ID           int       `json:"id"`
@@ -22,7 +23,13 @@ type RegisterRequest struct {
 	FullName string `json:"full_name"`
 	Company  string `json:"company"`
 }
-
+type LoginResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
@@ -30,4 +37,9 @@ type LoginRequest struct {
 
 type TopUpRequest struct {
 	Amount float64 `json:"amount" binding:"required,gt=0"`
+}
+type CustomClaims struct {
+	UserID   int    `json:"user_id"`
+	Username string `json:"username"`
+	jwt.RegisteredClaims
 }

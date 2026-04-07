@@ -49,6 +49,7 @@ func main() {
 		users.POST("/login", userH.Login)
 		users.GET("/:id", userH.GetProfile)
 		users.POST("/:id/topup", userH.TopUp)
+		users.POST("/refresh" ,userH.Refresh)
 	}
 
 	// Package routes
