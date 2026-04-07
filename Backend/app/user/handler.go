@@ -48,6 +48,23 @@ func (h *Handler) Login(c *gin.Context) {
 
 	// TODO: Generate JWT in next iteration
 	c.JSON(http.StatusOK, gin.H{"message": "login successful", "user_id": user.ID, "username": user.Username})
+	
+	user, err := h.service.Login(&req)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	accessToken, refreshToken, err := h.service.GenerateTokenPair(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	// คืนค่ารูปแบบ LoginResponse ตาม Model ที่คุณสร้างไว้
+	c.JSON(http.StatusOK, LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	})
 }
 
 // GET /api/users/:id
@@ -88,4 +105,22 @@ func (h *Handler) TopUp(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "top-up successful", "balance": newBalance})
+}
+func (h *Handler) Refresh(c *gin.Context) {
+	var req RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	accessToken, refreshToken, err := h.service.RefreshToken(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	})
 }
