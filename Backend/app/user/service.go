@@ -58,7 +58,6 @@ func (s *Service) TopUp(userID int, amount float64) (float64, error) {
 	return s.repo.TopUp(userID, amount)
 }
 func (s *Service) GenerateTokenPair(user *User) (string, string, error) {
-	// 1. สร้าง Access Token (อายุสั้น เช่น 15 นาที)
 	accessExpiration := time.Now().Add(15 * time.Minute)
 	accessClaims := &CustomClaims{
 		UserID:   user.ID,
@@ -74,8 +73,7 @@ func (s *Service) GenerateTokenPair(user *User) (string, string, error) {
 		return "", "", err
 	}
 
-	// 2. สร้าง Refresh Token (อายุยาว เช่น 7 วัน)
-	refreshExpiration := time.Now().Add(7 * 24 * time.Hour)
+	refreshExpiration := time.Now().Add(2 * 24 * time.Hour)
 	refreshClaims := &CustomClaims{
 		UserID:   user.ID,
 		Username: user.Username,
