@@ -18,6 +18,8 @@ CREATE TABLE games (
     genre           VARCHAR(100) NOT NULL,
     region          VARCHAR(100) NOT NULL,
     platform        VARCHAR(100) NOT NULL,
+    publisher       VARCHAR(255) NOT NULL,
+    developer  VARCHAR(255) NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

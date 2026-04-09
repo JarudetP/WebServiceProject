@@ -10,6 +10,7 @@ import (
 	"gamedata/db"
 	pkghandler "gamedata/pkg"
 	userhandler "gamedata/user"
+	gamehandler "gamedata/game"
 )
 
 func main() {
@@ -61,6 +62,11 @@ func main() {
 		packages.GET("/subscription", pkgH.GetActiveSubscription)
 	}
 
+	//Game routes
+	games := r.Group("/api/games")
+	{
+		games.GET("", gamehandler.ListGames(db.DB))
+	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
