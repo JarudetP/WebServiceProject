@@ -20,6 +20,7 @@ CREATE TABLE games (
     platform        VARCHAR(100) NOT NULL,
     publisher       VARCHAR(255) NOT NULL,
     developer  VARCHAR(255) NOT NULL,
+    timestamp       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -27,7 +28,10 @@ CREATE TABLE games (
 CREATE INDEX idx_games_genre    ON games (genre);
 CREATE INDEX idx_games_region   ON games (region);
 CREATE INDEX idx_games_platform ON games (platform);
-
+INSERT INTO games (name, total_players, current_players, revenue, genre, region, platform, publisher, developer, timestamp) VALUES
+('Epic Adventure', 5000000, 1200000, 15000000.00, 'Action RPG', 'North America', 'PC', 'Epic Games', 'Epic Games', NOW()),
+('Space Odyssey', 3000000, 800000, 9000000.00, 'Sci-Fi', 'Europe', 'Console', 'Galactic Studios', 'Galactic Studios', NOW()),
+('Mystic Quest', 2000000, 500000, 5000000.00, 'Fantasy', 'Asia', 'Mobile', 'Mystic Inc.', 'Mystic Inc.', NOW());
 -- ============================================================
 -- 2. PACKAGES
 -- ============================================================

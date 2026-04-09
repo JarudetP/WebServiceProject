@@ -2,18 +2,18 @@ package game
 
 import "time"
 
-
 type Game struct {
-	id          int     `json:"id"`
-	name        string  `json:"name"`
-	total_players int     `json:"total_players"`
-	current_players int     `json:"current_players"`
-	revenue	 float64 `json:"revenue"`
-	genre 	 string  `json:"genre"`
-	region 	 string  `json:"region"`
-	platform string  `json:"platform"`
-	publisher string  `json:"publisher"`
-	developer string  `json:"developer"`
-	created_at time.Time `json:"created_at"`
-	updated_at time.Time `json:"updated_at"`
+	ID             int       `json:"id"`
+	Name           string    `json:"name"`
+	TotalPlayers   int       `json:"total_players"`
+	CurrentPlayers int       `json:"current_players"`
+	Revenue        float64   `json:"revenue"`
+	Genre          string    `json:"genre"`
+	Region         string    `json:"region"`
+	Platform       string    `json:"platform"`
+	Publisher      string    `json:"publisher"`
+	Developer      string    `json:"developer"`
+	Timestamp      time.Time `json:"timestamp"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
