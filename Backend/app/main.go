@@ -66,6 +66,10 @@ func main() {
 	games := r.Group("/api/games")
 	{
 		games.GET("", gamehandler.ListGames(db.DB))
+		games.GET("/:id", gamehandler.GetGame(db.DB))
+		games.POST("", gamehandler.CreateGame(db.DB))
+		games.PUT("/:id", gamehandler.UpdateGame(db.DB))
+		games.DELETE("/:id", gamehandler.DeleteGame(db.DB))
 	}
 	port := os.Getenv("PORT")
 	if port == "" {
