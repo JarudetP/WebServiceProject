@@ -1,7 +1,9 @@
 package user
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 )
 
@@ -15,25 +17,25 @@ func NewRepository(db *sql.DB) *Repository {
 
 func (r *Repository) Create(u *User) (*User, error) {
 	query := `
-		INSERT INTO users (username, email, password_hash, full_name, company, balance)
-		VALUES ($1, $2, $3, $4, $5, 0.00)
-		RETURNING id, username, email, full_name, company, balance, is_active, created_at, updated_at`
+		INSERT INTO users (username, email, password_hash, full_name, company, role, balance)
+		VALUES ($1, $2, $3, $4, $5, 'user', 0.00)
+		RETURNING id, username, email, full_name, company, role, balance, is_active, created_at, updated_at`
 
 	row := r.db.QueryRow(query, u.Username, u.Email, u.PasswordHash, u.FullName, u.Company)
 	result := &User{}
 	err := row.Scan(
 		&result.ID, &result.Username, &result.Email,
-		&result.FullName, &result.Company, &result.Balance,
+		&result.FullName, &result.Company, &result.Role, &result.Balance,
 		&result.IsActive, &result.CreatedAt, &result.UpdatedAt,
 	)
 	return result, err
 }
 
 func (r *Repository) FindByEmail(email string) (*User, error) {
-	query := `SELECT id, username, email, password_hash, full_name, company, balance, is_active FROM users WHERE email = $1`
+	query := `SELECT id, username, email, password_hash, full_name, company, role, balance, is_active FROM users WHERE email = $1`
 	row := r.db.QueryRow(query, email)
 	u := &User{}
-	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.FullName, &u.Company, &u.Balance, &u.IsActive)
+	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.FullName, &u.Company, &u.Role, &u.Balance, &u.IsActive)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
@@ -41,10 +43,10 @@ func (r *Repository) FindByEmail(email string) (*User, error) {
 }
 
 func (r *Repository) FindByID(id int) (*User, error) {
-	query := `SELECT id, username, email, full_name, company, balance, is_active, created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, username, email, full_name, company, role, balance, is_active, created_at, updated_at FROM users WHERE id = $1`
 	row := r.db.QueryRow(query, id)
 	u := &User{}
-	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.FullName, &u.Company, &u.Balance, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.FullName, &u.Company, &u.Role, &u.Balance, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
@@ -69,4 +71,51 @@ func (r *Repository) DeductBalance(userID int, amount float64) error {
 		return errors.New("insufficient balance")
 	}
 	return nil
+}
+
+func (r *Repository) FindByAPIKey(apiKey string) (int, int, string, error) {
+	query := `
+		SELECT k.user_id, k.id, u.role 
+		FROM api_keys k
+		JOIN users u ON k.user_id = u.id
+		WHERE k.key = $1 AND k.is_active = TRUE`
+	var userID, apiKeyID int
+	var role string
+	err := r.db.QueryRow(query, apiKey).Scan(&userID, &apiKeyID, &role)
+	if err == sql.ErrNoRows {
+		return 0, 0, "", errors.New("invalid or inactive API key")
+	}
+	return userID, apiKeyID, role, err
+}
+
+func (r *Repository) CreateAPIKey(userID int) (string, error) {
+	// Generate a 32-character random key
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	key := hex.EncodeToString(b)
+
+	query := `INSERT INTO api_keys (user_id, key, is_active) VALUES ($1, $2, TRUE)`
+	_, err := r.db.Exec(query, userID, key)
+	return key, err
+}
+
+func (r *Repository) GetAPIKeys(userID int) ([]string, error) {
+	query := `SELECT key FROM api_keys WHERE user_id = $1 AND is_active = TRUE`
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var keys []string
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			return nil, err
+		}
+		keys = append(keys, k)
+	}
+	return keys, nil
 }

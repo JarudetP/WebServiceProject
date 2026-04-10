@@ -110,3 +110,11 @@ func (s *Service) RefreshToken(tokenString string) (string, string, error) {
 	}
 	return s.GenerateTokenPair(user)
 }
+
+func (s *Service) CreateAPIKey(userID int) (string, error) {
+	return s.repo.CreateAPIKey(userID)
+}
+
+func (s *Service) GetAPIKeys(userID int) ([]string, error) {
+	return s.repo.GetAPIKeys(userID)
+}

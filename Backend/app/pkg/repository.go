@@ -113,3 +113,18 @@ func (r *Repository) ExtendSubscription(subID int, expiresAt time.Time) error {
 	return err
 }
 
+func (r *Repository) GetUsageCountInInterval(userID int, minutes int) (int, error) {
+	query := `SELECT COUNT(*) FROM api_usage_logs 
+			  WHERE user_id = $1 AND requested_at > NOW() - (INTERVAL '1 minute' * $2)`
+	var count int
+	err := r.db.QueryRow(query, userID, minutes).Scan(&count)
+	return count, err
+}
+
+func (r *Repository) LogAPIUsage(userID, apiKeyID int, endpoint, method string, statusCode int) error {
+	query := `INSERT INTO api_usage_logs (user_id, api_key_id, endpoint, method, status_code)
+			  VALUES ($1, $2, $3, $4, $5)`
+	_, err := r.db.Exec(query, userID, apiKeyID, endpoint, method, statusCode)
+	return err
+}
+
