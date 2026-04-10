@@ -14,6 +14,7 @@ import (
 	userhandler "gamedata/user"
 	gamehandler "gamedata/game"
 	"gamedata/middleware"
+	"github.com/gin-contrib/cors"
 )
 
 func main() {
@@ -47,6 +48,28 @@ func main() {
 	// Setup Gin router
 	r := gin.Default()
 
+	// Official CORS Middleware
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-API-Key", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Fallback to explicitly catch OPTIONS requests if Not Found
+	r.NoRoute(func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Origin, Content-Length, Content-Type, Authorization, X-API-Key, Accept")
+			c.AbortWithStatus(204)
+			return
+		}
+		c.JSON(404, gin.H{"error": "Not Found"})
+	})
+
+
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -60,11 +83,18 @@ func main() {
 	{
 		users.POST("/register", userH.Register)
 		users.POST("/login", userH.Login)
-		users.GET("/:id", userH.GetProfile)
-		users.POST("/:id/topup", userH.TopUp)
-		users.POST("/refresh" ,userH.Refresh)
-		users.POST("/:id/keys", userH.GenerateAPIKey)
-		users.GET("/:id/keys", userH.ListAPIKeys)
+		users.POST("/refresh", userH.Refresh)
+		
+		// Protected user routes
+		protectedUsers := users.Group("")
+		protectedUsers.Use(mw.RequireJWT(), mw.RequireSelf())
+		{
+			protectedUsers.GET("/:id", userH.GetProfile)
+			protectedUsers.POST("/:id/topup", userH.TopUp)
+			protectedUsers.POST("/:id/keys", userH.GenerateAPIKey)
+			protectedUsers.GET("/:id/keys", userH.ListAPIKeys)
+			protectedUsers.DELETE("/:id/keys/:key", userH.DeleteAPIKey)
+		}
 	}
 
 	// Package routes

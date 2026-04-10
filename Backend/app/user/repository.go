@@ -119,3 +119,16 @@ func (r *Repository) GetAPIKeys(userID int) ([]string, error) {
 	}
 	return keys, nil
 }
+
+func (r *Repository) DeleteAPIKey(userID int, key string) error {
+	query := `DELETE FROM api_keys WHERE user_id = $1 AND key = $2`
+	res, err := r.db.Exec(query, userID, key)
+	if err != nil {
+		return err
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return errors.New("key not found or unauthorized")
+	}
+	return nil
+}

@@ -158,3 +158,26 @@ func (h *Handler) ListAPIKeys(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"api_keys": keys})
 }
+
+// DELETE /api/users/:id/keys/:key
+func (h *Handler) DeleteAPIKey(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	key := c.Param("key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+		return
+	}
+
+	err = h.service.DeleteAPIKey(id, key)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "API Key deleted successfully"})
+}

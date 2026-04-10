@@ -118,3 +118,7 @@ func (s *Service) CreateAPIKey(userID int) (string, error) {
 func (s *Service) GetAPIKeys(userID int) ([]string, error) {
 	return s.repo.GetAPIKeys(userID)
 }
+
+func (s *Service) DeleteAPIKey(userID int, key string) error {
+	return s.repo.DeleteAPIKey(userID, key)
+}
