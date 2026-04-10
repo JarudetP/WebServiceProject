@@ -19,7 +19,8 @@ CREATE TABLE games (
     region          VARCHAR(100) NOT NULL,
     platform        VARCHAR(100) NOT NULL,
     publisher       VARCHAR(255) NOT NULL,
-    developer  VARCHAR(255) NOT NULL,
+    developer       VARCHAR(255) NOT NULL,
+    image_url       VARCHAR(500) NOT NULL DEFAULT '',
     timestamp       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -101,6 +102,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     full_name     VARCHAR(255),
     company       VARCHAR(255),
+    role          VARCHAR(20) NOT NULL DEFAULT 'user',
     balance       DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -108,6 +110,10 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_email ON users (email);
+
+-- To create an admin user:
+-- 1. Register via API: POST /api/users/register
+-- 2. Then run: UPDATE users SET role = 'admin' WHERE username = 'testuser';
 
 -- ============================================================
 -- 4. SUBSCRIPTIONS

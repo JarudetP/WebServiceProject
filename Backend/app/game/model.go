@@ -13,6 +13,7 @@ type Game struct {
 	Platform       string    `json:"platform"`
 	Publisher      string    `json:"publisher"`
 	Developer      string    `json:"developer"`
+	ImageURL       string    `json:"image_url"`
 	Timestamp      time.Time `json:"timestamp"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`

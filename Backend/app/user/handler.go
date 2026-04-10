@@ -3,6 +3,7 @@ package user
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,6 +26,17 @@ func (h *Handler) Register(c *gin.Context) {
 
 	user, err := h.service.Register(&req)
 	if err != nil {
+		// Check for duplicate key error (PostgreSQL error code 23505)
+		if strings.Contains(err.Error(), "duplicate key") {
+			if strings.Contains(err.Error(), "username") {
+				c.JSON(http.StatusConflict, gin.H{"error": "Username is already taken"})
+				return
+			}
+			if strings.Contains(err.Error(), "email") {
+				c.JSON(http.StatusConflict, gin.H{"error": "Email is already registered"})
+				return
+			}
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -111,4 +123,38 @@ func (h *Handler) Refresh(c *gin.Context) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	})
+}
+
+// POST /api/users/:id/keys
+func (h *Handler) GenerateAPIKey(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	key, err := h.service.CreateAPIKey(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"api_key": key})
+}
+
+// GET /api/users/:id/keys
+func (h *Handler) ListAPIKeys(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	keys, err := h.service.GetAPIKeys(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"api_keys": keys})
 }
