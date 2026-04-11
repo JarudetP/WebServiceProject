@@ -18,3 +18,10 @@ type Game struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
+
+type GameHistory struct {
+	GameID         int       `json:"game_id"`
+	TotalPlayers   int       `json:"total_players"`
+	CurrentPlayers int       `json:"current_players"`
+	RecordedAt     time.Time `json:"recorded_at"`
+}

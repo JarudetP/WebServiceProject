@@ -110,7 +110,11 @@ func (s *Service) Purchase(userID, packageID int) (*Subscription, error) {
 	return sub, nil
 }
 
-
 func (s *Service) GetActiveSubscription(userID int) (*Subscription, error) {
 	return s.repo.GetActiveSubscription(userID)
+}
+
+func (s *Service) GetUsageStats(userID int) ([]UsageStat, error) {
+	// Default to last 30 days
+	return s.repo.GetUsageStats(userID, 30)
 }

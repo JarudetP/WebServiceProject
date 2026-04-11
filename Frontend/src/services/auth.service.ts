@@ -22,12 +22,16 @@ export const authService = {
     localStorage.removeItem('api_key');
   },
 
-  getCurrentUser: (): { user_id: number; username: string } | null => {
+  getCurrentUser: (): { user_id: number; username: string; role: string } | null => {
     const token = localStorage.getItem('access_token');
     if (!token) return null;
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return { user_id: payload.user_id, username: payload.username };
+      return { 
+        user_id: payload.user_id, 
+        username: payload.username, 
+        role: payload.role 
+      };
     } catch {
       return null;
     }

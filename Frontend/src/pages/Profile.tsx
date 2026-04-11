@@ -5,13 +5,15 @@ import type { Package, Subscription } from '../services/package.service';
 import { packageService } from '../services/package.service';
 import type { User, ApiKey } from '../types';
 import toast from 'react-hot-toast';
-import { Key, Package as PkgIcon, Wallet, Copy, Check, User as UserIcon, Trash2 } from 'lucide-react';
+import { Key, Package as PkgIcon, Wallet, Copy, Check, User as UserIcon, Trash2, BarChart as ChartIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [usageData, setUsageData] = useState<{ date: string, count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -25,17 +27,19 @@ export const Profile: React.FC = () => {
       if (!currentUser) return;
       const userId = currentUser.user_id;
       
-      const [usr, apis, pkgs, sub] = await Promise.all([
+      const [usr, apis, pkgs, sub, usage] = await Promise.all([
         authService.getProfile(userId),
         authService.getKeys(userId),
         packageService.getPackages(),
-        packageService.getActiveSubscription(userId)
+        packageService.getActiveSubscription(userId),
+        packageService.getUsageStats()
       ]);
       
       setUser(usr && !(usr as any).error ? usr : null);
       setKeys(Array.isArray(apis) ? apis : []);
       setPackages(Array.isArray(pkgs) ? pkgs : []);
       setSubscription(sub && !(sub as any).error ? sub : null);
+      setUsageData(Array.isArray(usage) ? usage : []);
       
       // Auto-set the first active api key as global default for games easily if not exist
       const validApis = Array.isArray(apis) ? apis : [];
@@ -223,11 +227,11 @@ export const Profile: React.FC = () => {
                       Package ID: {subscription.package_id}
                     </p>
                     <p className="text-xs text-accent mt-1">
-                      Expires: {new Date(subscription.end_date).toLocaleDateString()}
+                      Expires: {new Date(subscription.expires_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                    Active
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${subscription.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {subscription.status === 'active' ? 'Active' : subscription.status}
                   </span>
                </div>
             ) : (
@@ -235,6 +239,45 @@ export const Profile: React.FC = () => {
                     <p className="text-sm text-accent">You don't have an active subscription.</p>
                 </div>
             )}
+          </div>
+
+          {/* Usage Chart */}
+          <div className="bg-white p-6 rounded-2xl border border-border shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <ChartIcon className="w-5 h-5 text-accent" />
+              <h3 className="text-lg font-medium tracking-tight">API Request History (30d)</h3>
+            </div>
+            <div className="h-64 w-full">
+               {usageData.length > 0 ? (
+                 <ResponsiveContainer width="100%" height="100%">
+                   <BarChart data={usageData}>
+                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                     <XAxis 
+                        dataKey="date" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#9ca3af', fontSize: 10 }}
+                        tickFormatter={(val) => val.split('-').slice(1).join('/')}
+                        minTickGap={30}
+                     />
+                     <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#9ca3af', fontSize: 10 }}
+                     />
+                     <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                        labelStyle={{ color: '#111827', fontWeight: 600 }}
+                     />
+                     <Bar dataKey="count" fill="#111827" radius={[4, 4, 0, 0]} />
+                   </BarChart>
+                 </ResponsiveContainer>
+               ) : (
+                 <div className="h-full flex items-center justify-center border-2 border-dashed border-border rounded-xl">
+                   <p className="text-sm text-accent">No usage data found for this period.</p>
+                 </div>
+               )}
+            </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-border shadow-sm">
@@ -253,7 +296,7 @@ export const Profile: React.FC = () => {
                        </li>
                        <li className="flex items-center gap-2 text-sm text-foreground">
                          <Check className="w-4 h-4 text-accent" />
-                         {pkg.duration_days} Days access
+                         {pkg.historical_data_days} Days historical data
                        </li>
                     </ul>
                   </div>

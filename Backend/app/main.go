@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"log"
+	"math"
+	"math/rand"
 	"os"
 	"time"
 
@@ -10,10 +12,11 @@ import (
 	"github.com/joho/godotenv"
 
 	"gamedata/db"
-	pkghandler "gamedata/pkg"
-	userhandler "gamedata/user"
 	gamehandler "gamedata/game"
 	"gamedata/middleware"
+	pkghandler "gamedata/pkg"
+	userhandler "gamedata/user"
+
 	"github.com/gin-contrib/cors"
 )
 
@@ -43,6 +46,7 @@ func main() {
 	mw := middleware.NewMiddleware(userRepo, pkgRepo)
 
 	// Start player simulator background worker
+	seedHistoricalData(db.DB)
 	go startPlayerSimulator(db.DB)
 
 	// Setup Gin router
@@ -50,11 +54,11 @@ func main() {
 
 	// Official CORS Middleware
 	r.Use(cors.New(cors.Config{
-		AllowAllOrigins:  true,
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-API-Key", "Accept"},
-		ExposeHeaders:    []string{"Content-Length"},
-		MaxAge:           12 * time.Hour,
+		AllowAllOrigins: true,
+		AllowMethods:    []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:    []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-API-Key", "Accept"},
+		ExposeHeaders:   []string{"Content-Length"},
+		MaxAge:          12 * time.Hour,
 	}))
 
 	// Fallback to explicitly catch OPTIONS requests if Not Found
@@ -68,7 +72,6 @@ func main() {
 		}
 		c.JSON(404, gin.H{"error": "Not Found"})
 	})
-
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
@@ -84,7 +87,7 @@ func main() {
 		users.POST("/register", userH.Register)
 		users.POST("/login", userH.Login)
 		users.POST("/refresh", userH.Refresh)
-		
+
 		// Protected user routes
 		protectedUsers := users.Group("")
 		protectedUsers.Use(mw.RequireJWT(), mw.RequireSelf())
@@ -101,18 +104,20 @@ func main() {
 	packages := r.Group("/api/packages")
 	{
 		packages.GET("", pkgH.ListPackages)
+		packages.GET("/stats/usage", mw.RequireJWT(), pkgH.GetUsageStats)
 		packages.GET("/:id", pkgH.GetPackage)
 		packages.POST("/purchase", pkgH.Purchase)
 		packages.GET("/subscription", pkgH.GetActiveSubscription)
 	}
 
-	//Game routes (Protected by Auth and RateLimit)
+	// Game routes (Protected by Auth and RateLimit)
 	games := r.Group("/api/games")
 	games.Use(mw.Auth(), mw.RateLimit())
 	{
 		games.GET("", gamehandler.ListGames(db.DB))
 		games.GET("/:id", gamehandler.GetGame(db.DB))
-		
+		games.GET("/:id/history", gamehandler.GetGameHistory(db.DB))
+
 		// Admin only routes
 		adminGames := games.Group("")
 		adminGames.Use(mw.Admin())
@@ -122,6 +127,7 @@ func main() {
 			adminGames.DELETE("/:id", gamehandler.DeleteGame(db.DB))
 		}
 	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -137,14 +143,147 @@ func startPlayerSimulator(db *sql.DB) {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
+	// Seed random for this goroutine
+	src := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(src)
+
 	for range ticker.C {
-		// Update EACH game with a DIFFERENT random number between 100,000 and 250,000 using SQL
-		result, err := db.Exec("UPDATE games SET current_players = floor(random() * 150001 + 100000)")
+		rows, err := db.Query("SELECT id, total_players FROM games")
 		if err != nil {
-			log.Printf("Simulator error: %v", err)
+			log.Printf("Simulator query error: %v", err)
 			continue
 		}
-		rows, _ := result.RowsAffected()
-		log.Printf("Simulator: Updated %d games with unique player counts", rows)
+		
+		for rows.Next() {
+			var id, totalPlayers int
+			rows.Scan(&id, &totalPlayers)
+			
+			now := time.Now()
+			hourOfDay := now.Hour()
+			dayOfWeek := now.Weekday()
+			isWeekend := dayOfWeek == time.Saturday || dayOfWeek == time.Sunday
+			
+			// Use a more chaotic wave with game-specific phase shift
+			phaseShift := float64(id % 24)
+			wave := math.Sin(float64(hourOfDay-15+int(phaseShift)) * 2 * math.Pi / 24)
+			wave += math.Sin(float64(hourOfDay*2) * 2 * math.Pi / 24) * 0.15 // Extra jitter
+			
+			base := 160000.0 + float64(id*2000)
+			amp := 55000.0 + r.Float64()*15000.0
+			
+			if isWeekend {
+				base *= 1.2
+				amp *= 1.3
+			}
+			
+			// Noise: 15% high-frequency jitter
+			noise := (r.Float64() * 0.2) - 0.1
+			players := int((base + wave*amp) * (1.0 + noise))
+			
+			// Rare "Spike" event (2% chance)
+			if r.Float64() < 0.02 {
+				players = int(float64(players) * (1.3 + r.Float64()*0.4))
+			}
+
+			if players < 5000 { players = 5000 + r.Intn(5000) }
+			
+			_, err = db.Exec("UPDATE games SET current_players = $1 WHERE id = $2", players, id)
+			if err != nil {
+				log.Printf("Simulator update error for game %d: %v", id, err)
+				continue
+			}
+			
+			_, err = db.Exec("INSERT INTO game_player_history (game_id, total_players, current_players, recorded_at) VALUES ($1, $2, $3, NOW())", id, totalPlayers, players)
+			if err != nil {
+				log.Printf("Simulator history error for game %d: %v", id, err)
+			}
+		}
+		rows.Close()
 	}
+}
+
+func seedHistoricalData(db *sql.DB) {
+	var count int
+	db.QueryRow("SELECT COUNT(*) FROM game_player_history").Scan(&count)
+	
+	// INCREASE THRESHOLD: If it's the old uniform data, nuke it.
+	if count > 0 && count < 5000 {
+		log.Println("Purging old repetitive history for organic overhaul...")
+		db.Exec("DELETE FROM game_player_history")
+	} else if count >= 5000 {
+		log.Println("Historical data looks dense enough, skipping seed.")
+		return
+	}
+
+	log.Println("Seeding ORGANIC historical data (High Entropy)...")
+
+	rows, err := db.Query("SELECT id, total_players FROM games")
+	if err != nil {
+		log.Printf("Seeding fetch error: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	var games []struct {
+		id int
+		tp int
+	}
+	for rows.Next() {
+		var g struct { id int; tp int }
+		rows.Scan(&g.id, &g.tp)
+		games = append(games, g)
+	}
+
+	src := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(src)
+	now := time.Now()
+
+	for _, game := range games {
+		// Game-specific behavior
+		phaseShift := r.Float64() * 24.0
+		dailyVig := make([]float64, 8) // per day multiplier
+		for i := range dailyVig { dailyVig[i] = 0.85 + r.Float64()*0.3 }
+
+		for h := 0; h < 7*24*2; h++ {
+			recordedAt := now.Add(time.Duration(-h*30) * time.Minute)
+			dayIndex := h / (24 * 2)
+			hourOfDay := recordedAt.Hour()
+			isWeekend := recordedAt.Weekday() == time.Saturday || recordedAt.Weekday() == time.Sunday
+
+			// Primary wave + random peak shifting
+			wave := math.Sin(float64(hourOfDay-16)*2*math.Pi/24 + (phaseShift / 24.0 * 2 * math.Pi))
+			// Secondary jitter wave
+			wave += math.Sin(float64(hourOfDay*3)*2*math.Pi/24) * 0.1
+			
+			base := 160000.0 + float64(game.id*3000)
+			amp := 60000.0 + r.Float64()*20000.0
+			
+			if isWeekend {
+				base *= 1.25
+				amp *= 1.4
+			}
+
+			// Apply per-day entropy
+			players := (base + wave*amp) * dailyVig[dayIndex % 8]
+			
+			// Jagged noise (15% variation)
+			jitter := (r.Float64() * 0.15) - 0.075
+			players *= (1.0 + jitter)
+			
+			// Random "News/Event" Spikes (1% chance per data point)
+			if r.Float64() < 0.01 {
+				multiplier := 1.4 + r.Float64()*0.6
+				players *= multiplier
+			}
+
+			if players < 8000 { players = 8000 + r.Float64()*4000 }
+			
+			_, err := db.Exec("INSERT INTO game_player_history (game_id, total_players, current_players, recorded_at) VALUES ($1, $2, $3, $4)", 
+				game.id, game.tp, int(players), recordedAt)
+			if err != nil {
+				log.Printf("Seeding insert error: %v", err)
+			}
+		}
+	}
+	log.Println("Organic seeding complete.")
 }

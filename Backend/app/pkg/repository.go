@@ -128,3 +128,41 @@ func (r *Repository) LogAPIUsage(userID, apiKeyID int, endpoint, method string, 
 	return err
 }
 
+func (r *Repository) GetUsageStats(userID int, days int) ([]UsageStat, error) {
+	query := `
+		SELECT 
+			TO_CHAR(date_series, 'YYYY-MM-DD') as date,
+			COALESCE(usage.count, 0) as count
+		FROM (
+			SELECT generate_series(
+				CURRENT_DATE - (INTERVAL '1 day' * ($2 - 1)), 
+				CURRENT_DATE, 
+				'1 day'::interval
+			)::date as date_series
+		) d
+		LEFT JOIN (
+			SELECT 
+				requested_at::date as usage_date, 
+				COUNT(*) as count
+			FROM api_usage_logs
+			WHERE user_id = $1 AND requested_at >= CURRENT_DATE - (INTERVAL '1 day' * ($2 - 1))
+			GROUP BY requested_at::date
+		) usage ON d.date_series = usage.usage_date
+		ORDER BY d.date_series ASC
+	`
+	rows, err := r.db.Query(query, userID, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []UsageStat
+	for rows.Next() {
+		var s UsageStat
+		if err := rows.Scan(&s.Date, &s.Count); err != nil {
+			return nil, err
+		}
+		stats = append(stats, s)
+	}
+	return stats, nil
+}

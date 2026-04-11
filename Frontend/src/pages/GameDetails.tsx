@@ -4,23 +4,56 @@ import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { gameService } from '../services/game.service';
 import type { Game } from '../types';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Users, Globe, Building2, Briefcase, Activity } from 'lucide-react';
+import { ArrowLeft, Users, Globe, Building2, Briefcase, Activity, Calendar, Terminal, Copy, Check } from 'lucide-react';
+import { 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 
 export const GameDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [game, setGame] = useState<Game | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCopying, setIsCopying] = useState(false);
 
   useEffect(() => {
-    fetchGame();
+    fetchGameData();
+    const interval = setInterval(fetchGameData, 10000); // Poll every 10s
+    return () => clearInterval(interval);
   }, [id]);
 
-  const fetchGame = async () => {
+  const fetchGameData = async () => {
     try {
-      const data = await gameService.getGame(Number(id));
-      if (!data || (data as any).error) throw new Error('Not found');
-      setGame(data);
+      const [gameData, historyData] = await Promise.all([
+        gameService.getGame(Number(id)),
+        gameService.getGameHistory(Number(id))
+      ]);
+      
+      if (!gameData || (gameData as any).error) throw new Error('Not found');
+      setGame(gameData);
+      
+      // Format history data for the chart
+      const formattedHistory = historyData.map(h => ({
+        ...h,
+        displayTime: new Date(h.recorded_at).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        shortDate: new Date(h.recorded_at).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+        })
+      }));
+      setHistory(formattedHistory);
     } catch (error) {
       toast.error('Failed to load game details');
       navigate('/games');
@@ -66,13 +99,13 @@ export const GameDetails: React.FC = () => {
            <div className="w-32 h-32 md:w-40 md:h-40 shrink-0 rounded-[1.5rem] overflow-hidden bg-secondary border border-border flex items-center justify-center text-5xl font-bold text-foreground shadow-sm">
              {imageUrl ? (
                 <img 
-                  src={imageUrl} 
-                  alt={game.name} 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                  }}
+                   src={imageUrl} 
+                   alt={game.name} 
+                   className="w-full h-full object-cover"
+                   onError={(e) => {
+                     (e.target as HTMLImageElement).style.display = 'none';
+                     (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                   }}
                 />
              ) : null}
              <span className={`${imageUrl ? 'hidden' : ''}`}>{game.name.charAt(0)}</span>
@@ -135,7 +168,7 @@ export const GameDetails: React.FC = () => {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-white p-8 rounded-[2rem] border border-border shadow-sm flex items-center justify-between group hover:border-gray-300 transition-all">
              <div>
                <div className="flex items-center gap-2 mb-3">
@@ -174,6 +207,127 @@ export const GameDetails: React.FC = () => {
           </div>
       </div>
 
+      {/* 7-Day Player History Chart */}
+      <div className="bg-white p-8 rounded-[2rem] border border-border shadow-sm">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Calendar className="w-5 h-5 text-accent" />
+              <h3 className="text-lg font-bold tracking-tight text-foreground">7-Day Player Trend</h3>
+            </div>
+            <p className="text-sm text-accent">Historical concurrent player data for the last week.</p>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-foreground"></div>
+                <span className="text-xs font-medium text-accent">Concurrent Players</span>
+             </div>
+          </div>
+        </div>
+
+        <div className="h-[350px] w-full">
+          {history.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={history}>
+                <defs>
+                  <linearGradient id="colorPlayers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#111827" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#111827" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis 
+                  dataKey="shortDate" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#9ca3af', fontSize: 12 }}
+                  interval={Math.floor(history.length / 7)}
+                  minTickGap={30}
+                />
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#9ca3af', fontSize: 12 }}
+                  tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: '1px solid #e5e7eb', 
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                    padding: '12px'
+                  }}
+                  labelStyle={{ fontWeight: 600, color: '#111827', marginBottom: '4px' }}
+                  labelFormatter={(label, payload) => {
+                    if (payload && payload[0]) {
+                        return payload[0].payload.displayTime;
+                    }
+                    return label;
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="current_players" 
+                  name="Players"
+                  stroke="#111827" 
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorPlayers)" 
+                  animationDuration={1500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-accent">
+              No historical data available.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* API Integration Sandbox */}
+      <div className="bg-white p-8 rounded-[2rem] border border-border shadow-sm mt-6">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Terminal className="w-5 h-5 text-accent" />
+              <h3 className="text-lg font-bold tracking-tight text-foreground">API Integration Sandbox</h3>
+            </div>
+            <p className="text-sm text-accent">Preview and copy the live JSON response for this game.</p>
+          </div>
+          <button 
+             onClick={() => {
+               navigator.clipboard.writeText(JSON.stringify(game, null, 2));
+               setIsCopying(true);
+               toast.success('JSON copied to clipboard');
+               setTimeout(() => setIsCopying(false), 2000);
+             }}
+             className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground hover:bg-foreground hover:text-background text-sm font-semibold rounded-xl transition-all active:scale-95"
+          >
+             {isCopying ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+             {isCopying ? 'Copied' : 'Copy JSON'}
+          </button>
+        </div>
+
+        <div className="space-y-4">
+           {/* Endpoint Preview */}
+           <div className="p-4 bg-gray-50 border border-border rounded-2xl flex items-center justify-between group">
+              <div className="flex items-center gap-3 overflow-hidden">
+                 <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">GET</span>
+                 <code className="text-xs font-mono text-accent truncate">/api/games/{id}</code>
+              </div>
+              <span className="text-[10px] font-bold text-accent uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Production Endpoint</span>
+           </div>
+
+           {/* JSON Code Block */}
+           <div className="relative group">
+              <div className="absolute top-4 right-4 text-[10px] font-bold text-accent uppercase tracking-widest opacity-40">application/json</div>
+              <pre className="p-6 bg-[#1e1e1e] text-blue-100 rounded-2xl overflow-x-auto text-xs font-mono custom-scrollbar max-h-80 leading-relaxed shadow-inner">
+                {JSON.stringify(game, null, 2)}
+              </pre>
+           </div>
+        </div>
+      </div>
     </DashboardLayout>
   );
 };

@@ -76,9 +76,26 @@ func (h *Handler) GetActiveSubscription(c *gin.Context) {
 
 	sub, err := h.service.GetActiveSubscription(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusOK, nil)
 		return
 	}
 
 	c.JSON(http.StatusOK, sub)
+}
+
+func (h *Handler) GetUsageStats(c *gin.Context) {
+	val, exists := c.Get("jwt_user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	userID := val.(int)
+
+	stats, err := h.service.GetUsageStats(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

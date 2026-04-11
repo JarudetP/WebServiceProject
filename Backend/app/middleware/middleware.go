@@ -28,27 +28,40 @@ func NewMiddleware(userRepo *user.Repository, pkgRepo *pkg.Repository) *Middlewa
 func (m *Middleware) Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-API-Key")
-		if apiKey == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "API key required (X-API-Key header)"})
-			c.Abort()
-			return
-		}
-
-		userID, apiKeyID, role, err := m.userRepo.FindByAPIKey(apiKey)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or inactive API key"})
-			c.Abort()
-			return
-		}
-
-		// Store in context for subsequent handlers/middleware
-		c.Set("userID", userID)
-		c.Set("apiKeyID", apiKeyID)
-		c.Set("role", role)
 		
-		// Debug log
-		// fmt.Printf("DEBUG: Auth middleware set role: %s for userID: %d\n", role, userID)
-		c.Next()
+		// 1. Try API Key first
+		if apiKey != "" {
+			userID, apiKeyID, role, err := m.userRepo.FindByAPIKey(apiKey)
+			if err == nil {
+				c.Set("userID", userID)
+				c.Set("apiKeyID", apiKeyID)
+				c.Set("role", role)
+				c.Next()
+				return
+			}
+		}
+
+		// 2. Fallback to JWT (Bearer Token)
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			token, err := jwt.ParseWithClaims(tokenString, &user.CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+				return []byte(os.Getenv("JWT_SECRET")), nil
+			})
+
+			if err == nil && token.Valid {
+				if claims, ok := token.Claims.(*user.CustomClaims); ok {
+					c.Set("userID", claims.UserID)
+					c.Set("apiKeyID", 0) // No specific API key used
+					c.Set("role", claims.Role)
+					c.Next()
+					return
+				}
+			}
+		}
+
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required (X-API-Key or Bearer Token)"})
+		c.Abort()
 	}
 }
 
@@ -127,10 +140,12 @@ func (m *Middleware) RateLimit() gin.HandlerFunc {
 			}
 		}
 
-		// 4. Log the request before proceeding (or after if you prefer, but here we log entry)
-		// We'll record the actual status code in a real implementation by wrapping the writer,
-		// but for now we log that the attempt was made and was within quota.
-		_ = m.pkgRepo.LogAPIUsage(userID, apiKeyID, c.Request.URL.Path, c.Request.Method, 200)
+		// 4. Log the request before proceeding
+		// Only log when an actual API key was used (apiKeyID > 0) to avoid FK violation
+		// on api_usage_logs.api_key_id when authenticating via JWT (apiKeyID = 0).
+		if apiKeyID > 0 {
+			_ = m.pkgRepo.LogAPIUsage(userID, apiKeyID, c.Request.URL.Path, c.Request.Method, 200)
+		}
 
 		c.Next()
 	}
@@ -166,6 +181,7 @@ func (m *Middleware) RequireJWT() gin.HandlerFunc {
 
 		c.Set("jwt_user_id", claims.UserID)
 		c.Set("jwt_username", claims.Username)
+		c.Set("role", claims.Role)
 		c.Next()
 	}
 }

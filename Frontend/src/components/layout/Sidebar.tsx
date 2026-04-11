@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Gamepad2, LogOut, Settings, User } from 'lucide-react';
+import { LayoutDashboard, Gamepad2, LogOut, User } from 'lucide-react';
 import { authService } from '../../services/auth.service';
 import toast from 'react-hot-toast';
 

@@ -344,3 +344,36 @@ func DeleteGame(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "Game deleted successfully"})
 	}
 }
+
+func GetGameHistory(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		
+		rows, err := db.Query(`
+			SELECT game_id, total_players, current_players, recorded_at 
+			FROM game_player_history 
+			WHERE game_id = $1 
+			AND recorded_at >= NOW() - INTERVAL '7 days'
+			ORDER BY recorded_at ASC
+		`, id)
+		
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch history"})
+			return
+		}
+		defer rows.Close()
+
+		var history []GameHistory
+		for rows.Next() {
+			var h GameHistory
+			err := rows.Scan(&h.GameID, &h.TotalPlayers, &h.CurrentPlayers, &h.RecordedAt)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse history"})
+				return
+			}
+			history = append(history, h)
+		}
+
+		c.JSON(http.StatusOK, history)
+	}
+}

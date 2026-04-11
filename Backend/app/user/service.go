@@ -62,6 +62,7 @@ func (s *Service) GenerateTokenPair(user *User) (string, string, error) {
 	accessClaims := &CustomClaims{
 		UserID:   user.ID,
 		Username: user.Username,
+		Role:     user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(accessExpiration),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -77,6 +78,7 @@ func (s *Service) GenerateTokenPair(user *User) (string, string, error) {
 	refreshClaims := &CustomClaims{
 		UserID:   user.ID,
 		Username: user.Username,
+		Role:     user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(refreshExpiration),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
