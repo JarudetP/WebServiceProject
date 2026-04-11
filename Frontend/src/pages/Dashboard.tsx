@@ -12,7 +12,7 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchGames();
-    const interval = setInterval(fetchGames, 10000); // Poll every 10s
+    const interval = setInterval(fetchGames, 1800000); // Poll every 30m
     return () => clearInterval(interval);
   }, []);
 

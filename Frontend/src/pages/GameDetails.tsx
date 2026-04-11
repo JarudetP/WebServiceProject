@@ -22,10 +22,12 @@ export const GameDetails: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCopying, setIsCopying] = useState(false);
+  const [isCopyingEndpoint, setIsCopyingEndpoint] = useState(false);
+  const [isCopyingCurl, setIsCopyingCurl] = useState(false);
 
   useEffect(() => {
     fetchGameData();
-    const interval = setInterval(fetchGameData, 10000); // Poll every 10s
+    const interval = setInterval(fetchGameData, 1800000); // Poll every 30m
     return () => clearInterval(interval);
   }, [id]);
 
@@ -295,28 +297,58 @@ export const GameDetails: React.FC = () => {
             </div>
             <p className="text-sm text-accent">Preview and copy the live JSON response for this game.</p>
           </div>
-          <button 
-             onClick={() => {
-               navigator.clipboard.writeText(JSON.stringify(game, null, 2));
-               setIsCopying(true);
-               toast.success('JSON copied to clipboard');
-               setTimeout(() => setIsCopying(false), 2000);
-             }}
-             className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground hover:bg-foreground hover:text-background text-sm font-semibold rounded-xl transition-all active:scale-95"
-          >
-             {isCopying ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-             {isCopying ? 'Copied' : 'Copy JSON'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+               onClick={() => {
+                 const apiKey = localStorage.getItem('api_key') || 'YOUR_API_KEY';
+                 const curlCommand = `curl -X GET "http://localhost:8080/api/games/${id}" \\\n  -H "X-API-Key: ${apiKey}"`;
+                 navigator.clipboard.writeText(curlCommand);
+                 setIsCopyingCurl(true);
+                 toast.success('cURL command copied');
+                 setTimeout(() => setIsCopyingCurl(false), 2000);
+               }}
+               className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground hover:bg-foreground hover:text-background text-sm font-semibold rounded-xl transition-all active:scale-95 border border-border"
+            >
+               {isCopyingCurl ? <Check className="w-4 h-4" /> : <Terminal className="w-4 h-4" />}
+               {isCopyingCurl ? 'Copied' : 'Copy cURL'}
+            </button>
+            <button 
+               onClick={() => {
+                 navigator.clipboard.writeText(JSON.stringify(game, null, 2));
+                 setIsCopying(true);
+                 toast.success('JSON copied to clipboard');
+                 setTimeout(() => setIsCopying(false), 2000);
+               }}
+               className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground hover:bg-foreground hover:text-background text-sm font-semibold rounded-xl transition-all active:scale-95 border border-border"
+            >
+               {isCopying ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+               {isCopying ? 'Copied' : 'Copy JSON'}
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4">
            {/* Endpoint Preview */}
            <div className="p-4 bg-gray-50 border border-border rounded-2xl flex items-center justify-between group">
-              <div className="flex items-center gap-3 overflow-hidden">
+              <div className="flex items-center gap-3 overflow-hidden flex-1">
                  <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">GET</span>
-                 <code className="text-xs font-mono text-accent truncate">/api/games/{id}</code>
+                 <code className="text-xs font-mono text-accent truncate">http://localhost:8080/api/games/{id}</code>
               </div>
-              <span className="text-[10px] font-bold text-accent uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Production Endpoint</span>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-bold text-accent uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Production Endpoint</span>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`http://localhost:8080/api/games/${id}`);
+                    setIsCopyingEndpoint(true);
+                    toast.success('Endpoint URL copied');
+                    setTimeout(() => setIsCopyingEndpoint(false), 2000);
+                  }}
+                  className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-border text-accent hover:text-foreground"
+                  title="Copy Endpoint"
+                >
+                  {isCopyingEndpoint ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
            </div>
 
            {/* JSON Code Block */}

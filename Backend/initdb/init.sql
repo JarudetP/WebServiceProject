@@ -30,9 +30,9 @@ CREATE INDEX idx_games_genre    ON games (genre);
 CREATE INDEX idx_games_region   ON games (region);
 CREATE INDEX idx_games_platform ON games (platform);
 INSERT INTO games (name, total_players, current_players, revenue, genre, region, platform, publisher, developer, timestamp) VALUES
-('Epic Adventure', 5000000, 1200000, 15000000.00, 'Action RPG', 'North America', 'PC', 'Epic Games', 'Epic Games', NOW()),
-('Space Odyssey', 3000000, 800000, 9000000.00, 'Sci-Fi', 'Europe', 'Console', 'Galactic Studios', 'Galactic Studios', NOW()),
-('Mystic Quest', 2000000, 500000, 5000000.00, 'Fantasy', 'Asia', 'Mobile', 'Mystic Inc.', 'Mystic Inc.', NOW());
+('Epic Adventure', 5000000, 32450, 15000000.00, 'Action RPG', 'North America', 'PC', 'Epic Games', 'Epic Games', NOW()),
+('Space Odyssey', 3000000, 24120, 9000000.00, 'Sci-Fi', 'Europe', 'Console', 'Galactic Studios', 'Galactic Studios', NOW()),
+('Mystic Quest', 2000000, 48500, 5000000.00, 'Fantasy', 'Asia', 'Mobile', 'Mystic Inc.', 'Mystic Inc.', NOW());
 -- ============================================================
 -- 2. PACKAGES
 -- ============================================================
@@ -179,6 +179,20 @@ CREATE TABLE game_player_history (
 
 CREATE INDEX idx_game_player_history_game_recorded
     ON game_player_history (game_id, recorded_at);
+
+-- Seed 7 days of historical data (every 30 mins)
+INSERT INTO game_player_history (game_id, total_players, current_players, recorded_at)
+SELECT 
+    g.id, 
+    g.total_players, 
+    (20000 + (random() * 30001))::INT, 
+    gs.recorded_at
+FROM games g
+CROSS JOIN generate_series(
+    NOW() - INTERVAL '7 days', 
+    NOW(), 
+    INTERVAL '30 minutes'
+) AS gs(recorded_at);
 
 -- ============================================================
 -- 8. GENRE PLAYER STATS
