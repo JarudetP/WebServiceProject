@@ -5,7 +5,7 @@ import { gameService } from '../services/game.service';
 import { authService } from '../services/auth.service';
 import type { Game } from '../types';
 import toast from 'react-hot-toast';
-import { Search, Plus, Pencil, Trash2, Filter, Copy, Check, Link } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Filter, Copy, Check } from 'lucide-react';
 import { GameModal } from '../components/games/GameModal';
 
 export const Games: React.FC = () => {
@@ -21,7 +21,6 @@ export const Games: React.FC = () => {
   const [genreFilter, setGenreFilter] = useState('All Genres');
   const [platformFilter, setPlatformFilter] = useState('All Platforms');
   const [copyingId, setCopyingId] = useState<number | null>(null);
-  const [copyingPathId, setCopyingPathId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchGames();
@@ -91,14 +90,6 @@ export const Games: React.FC = () => {
     setTimeout(() => setCopyingId(null), 2000);
   };
 
-  const handleCopyPath = (e: React.MouseEvent, game: Game) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(`http://localhost:8080/api/games/${game.id}`);
-    setCopyingPathId(game.id);
-    toast.success('API path copied to clipboard');
-    setTimeout(() => setCopyingPathId(null), 2000);
-  };
-
   const openModal = (e?: React.MouseEvent, game?: Game) => {
     if (e) e.stopPropagation();
     setSelectedGame(game || null);
@@ -109,7 +100,7 @@ export const Games: React.FC = () => {
 
   return (
     <DashboardLayout title="Games Library">
-      <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         {/* Table Toolbar */}
         <div className="p-6 border-b border-border flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gray-50/30">
           <div className="flex flex-col md:flex-row gap-4 flex-1">

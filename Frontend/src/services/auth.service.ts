@@ -1,4 +1,4 @@
-import api from './api';
+import { userApi as api } from './api';
 import type { User, AuthResponse, ApiKey } from '../types';
 
 export const authService = {
@@ -49,11 +49,15 @@ export const authService = {
   
   generateKey: async (userId: number): Promise<{ apiKey: string }> => {
     const response = await api.post(`/users/${userId}/keys`);
-    // Will return plain api_key we can use. The backend actually might return it differently, adjust later.
     return response.data;
   },
 
   deleteKey: async (userId: number, key: string): Promise<void> => {
     await api.delete(`/users/${userId}/keys/${key}`);
+  },
+
+  getUsageStats: async (userId: number): Promise<{ date: string, count: number }[]> => {
+    const response = await api.get(`/users/${userId}/stats`);
+    return response.data || [];
   }
 };

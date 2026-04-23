@@ -1,4 +1,4 @@
-import api from './api';
+import { gameApi as api } from './api';
 import type { Game } from '../types';
 
 export const gameService = {

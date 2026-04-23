@@ -32,7 +32,7 @@ export const Profile: React.FC = () => {
         authService.getKeys(userId),
         packageService.getPackages(),
         packageService.getActiveSubscription(userId),
-        packageService.getUsageStats()
+        authService.getUsageStats(userId)
       ]);
       
       setUser(usr && !(usr as any).error ? usr : null);

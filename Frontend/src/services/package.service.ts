@@ -1,4 +1,4 @@
-import api from './api';
+import { packageApi as api } from './api';
 
 export interface Package {
   id: number;
@@ -38,10 +38,5 @@ export const packageService = {
   purchasePackage: async (userId: number, packageId: number): Promise<{ message: string }> => {
     const response = await api.post(`/packages/purchase?user_id=${userId}`, { package_id: packageId });
     return response.data;
-  },
-
-  getUsageStats: async (): Promise<{ date: string, count: number }[]> => {
-    const response = await api.get('/packages/stats/usage');
-    return response.data || [];
   }
 };

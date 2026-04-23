@@ -1,157 +1,147 @@
-# Game Data Platform
+# 🎮 Game Data Platform
 
-Subscription-based REST API for real-time game analytics. Users purchase tiered packages, generate API keys, and query game data within rate-limited access.
-
----
-
-## Tech Stack
-
-| Layer    | Stack                                              |
-|----------|----------------------------------------------------|
-| Backend  | Go, Gin, PostgreSQL 16, JWT, bcrypt                |
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Recharts |
-| Infra    | Docker Compose                                     |
+Subscription-based REST API platform for real-time game analytics. Users register, purchase tiered packages, generate API keys, and query live game data within rate-limited access tiers.
 
 ---
 
-## Quick Start
+## 🏗️ Architecture (Microservices)
 
-### 1. Database
+| Service            | Port  | Responsibility                                   |
+|--------------------|-------|--------------------------------------------------|
+| **User Service**   | 8081  | Registration, Login, API Key management, Balance |
+| **Package Service**| 8082  | Packages, Subscriptions, Purchase logic          |
+| **Game Service**   | 8083  | Game CRUD, Live player simulator, History        |
+| **User DB**        | 5431  | PostgreSQL for user-service                      |
+| **Package DB**     | 5432  | PostgreSQL for package-service                   |
+| **Game DB**        | 5437  | PostgreSQL for game-service                      |
+
+---
+
+## ⚙️ Tech Stack
+
+| Layer    | Stack                                               |
+|----------|-----------------------------------------------------|
+| Backend  | Go 1.21+, Gin, PostgreSQL 16, JWT, bcrypt           |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Recharts  |
+| Infra    | Docker Compose                                      |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- [Node.js 18+](https://nodejs.org/) (for the frontend)
+- [Go 1.21+](https://go.dev/) (only if you want to run backend services locally without Docker)
+
+---
+
+### Step 1 – Clone the repository
 
 ```bash
-cd Backend
-docker compose up -d
+git clone https://github.com/JarudetP/WebServiceProject.git
+cd WebServiceProject
 ```
 
-PostgreSQL starts on port `5435`. Schema auto-initializes from `initdb/init.sql`.
+---
 
-### 2. Backend
+### Step 2 – Configure Environment Variables
+
+All configuration is managed via the root `.env` file. A default one is already included:
+
+```
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=admin1234
+JWT_SECRET=your_jwt_secret_key
+
+USER_SERVICE_PORT=8081
+PACKAGE_SERVICE_PORT=8082
+GAME_SERVICE_PORT=8083
+
+USER_DB_PORT=5431
+PACKAGE_DB_PORT=5432
+GAME_DB_PORT=5437
+```
+
+> ⚠️ **Change `JWT_SECRET` before deploying to production!**
+
+---
+
+### Step 3 – Start the Backend (Docker)
+
+This command starts all 3 microservices + their 3 PostgreSQL databases:
 
 ```bash
-cd Backend/app
-air          # hot reload
-# or
-go run main.go
+# First time (or after changing Go code):
+docker-compose up -d --build
+
+# Normal start (no code changes):
+docker-compose start
 ```
 
-Runs on `http://localhost:8080`.
+Wait ~20 seconds for databases to initialize. Verify all services are running:
 
-### 3. Frontend
+```bash
+docker-compose ps
+```
+
+All services should show status `running`.
+
+---
+
+### Step 4 – Start the Frontend
 
 ```bash
 cd Frontend
-npm install
+npm install     # Only needed first time
 npm run dev
 ```
 
-Runs on `http://localhost:5173`.
+Open your browser at: **http://localhost:5173**
 
 ---
 
-## API Endpoints
+## 🧪 API Testing (Postman)
 
-### Auth
+A ready-to-use Postman collection is at `services/postman.json`.
 
-| Method | Path                   | Description        |
-|--------|------------------------|--------------------|
-| POST   | `/api/users/register`  | Create account     |
-| POST   | `/api/users/login`     | Get JWT tokens     |
-| POST   | `/api/users/refresh`   | Refresh access token |
-
-### Users (JWT required)
-
-| Method | Path                        | Description       |
-|--------|-----------------------------|-------------------|
-| GET    | `/api/users/:id`            | Get profile       |
-| POST   | `/api/users/:id/topup`      | Add balance       |
-| POST   | `/api/users/:id/keys`       | Generate API key  |
-| GET    | `/api/users/:id/keys`       | List API keys     |
-| DELETE | `/api/users/:id/keys/:key`  | Delete API key    |
-
-### Packages
-
-| Method | Path                          | Description           |
-|--------|-------------------------------|-----------------------|
-| GET    | `/api/packages`               | List all packages     |
-| GET    | `/api/packages/:id`           | Get package details   |
-| POST   | `/api/packages/purchase`      | Purchase or upgrade   |
-| GET    | `/api/packages/subscription`  | Get active subscription |
-
-### Games (API key + rate limit)
-
-| Method | Path              | Description         |
-|--------|-------------------|---------------------|
-| GET    | `/api/games`      | List all games      |
-| GET    | `/api/games/:id`  | Get game details    |
-| POST   | `/api/games`      | Create game (admin) |
-| PUT    | `/api/games/:id`  | Update game (admin) |
-| DELETE | `/api/games/:id`  | Delete game (admin) |
+Import it into Postman and use these environment variables:
+| Variable        | Value                    |
+|-----------------|--------------------------|
+| `user_url`      | `http://localhost:8081`  |
+| `package_url`   | `http://localhost:8082`  |
+| `game_url`      | `http://localhost:8083`  |
 
 ---
 
-## Subscription Tiers
+## 🔑 How to Use the Platform
 
-| Tier       | Price  | Requests        | Refresh Interval | Historical Data |
-|------------|--------|-----------------|------------------|-----------------|
-| Standard   | $29    | 100 / window    | 90 min           | 60 days         |
-| Platinum   | $149   | 5,000 / window  | 5 min            | 2 years         |
-| Enterprise | $499   | Unlimited       | 1 min            | 5 years         |
-
-Enterprise includes: revenue analytics, region breakdown, webhooks, bulk export, custom reports, dedicated support, SLA.
-
----
-
-## Architecture
-
-```
-Client
-  |
-  |-- Bearer token --> /api/users/*      --> RequireJWT + RequireSelf
-  |-- Bearer token --> /api/packages/*
-  |-- X-API-Key    --> /api/games/*      --> Auth + RateLimit
-  |
-  v
-[ Gin Router ] --> [ Middleware ] --> [ Handler ] --> [ Service ] --> [ Repository ] --> [ PostgreSQL ]
-```
-
-Each module (`user`, `game`, `pkg`) follows the same layered pattern: handler for HTTP, service for business logic, repository for data access. No ORM — raw SQL throughout.
-
-**Middleware chain:**
-- `RequireJWT` — validates Bearer token, sets user context
-- `RequireSelf` — ensures `:id` param matches authenticated user
-- `Auth` — validates `X-API-Key` header
-- `RateLimit` — enforces per-package request limits via `api_usage_logs`
-- `Admin` — restricts write operations to admin role
+1. **Register** a new user via `POST /api/users/register`
+2. **Login** via `POST /api/users/login` → get your JWT token
+3. **Top up balance** via `POST /api/users/:id/topup`
+4. **Purchase a package** via `POST /api/packages/purchase`
+5. **Generate an API key** via `POST /api/users/:id/keys`
+6. **Query game data** via `GET /api/games` using the `X-API-Key` header
 
 ---
 
-## Project Structure
+## 🛑 Stopping the Server
 
-```
-Backend/
-  app/
-    main.go              # entry point, routes, background worker
-    db/                  # database connection
-    middleware/          # auth, rate limit, JWT, RBAC
-    user/                # registration, login, keys, profile
-    game/                # CRUD, image upload/compression
-    pkg/                 # packages, subscriptions, purchase logic
-  initdb/init.sql        # full schema (10 tables)
-  docker-compose.yml     # PostgreSQL service
+```bash
+# Stop all services (keeps data):
+docker-compose stop
 
-Frontend/
-  src/
-    pages/               # Dashboard, Games, GameDetails, Profile, Login, Register
-    components/layout/   # Sidebar, DashboardLayout
-    services/            # axios instance, auth, game, package API clients
-    types/               # TypeScript interfaces
+# Stop and remove all containers + data volumes:
+docker-compose down -v
 ```
 
 ---
 
-## Notes
+## 📝 Notes
 
-- A Postman collection is available at `Backend/app/GameDataPlatform.postman_collection.json`
-- Subscriptions expire in 1 day in dev mode for rapid testing
-- A background goroutine simulates player counts every 10 minutes
+- Subscriptions expire in **1 day** in dev mode for rapid testing
+- The player count simulator runs every **30 minutes** (Game Service)
+- Enterprise package (`package_id = 3`) has **unlimited** API requests (`limit = -1`)
 - Game images are auto-compressed to JPEG (max 5MB) on upload
+- Database data persists between restarts via Docker volumes

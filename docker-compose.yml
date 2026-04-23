@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # --- USER SERVICE ---
+  user-db:
+    image: postgres:16-alpine
+    container_name: user_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${USER_DB_PORT}:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+      - ./services/user-service/initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d user_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build: 
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user_service
+    restart: unless-stopped
+    ports:
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+    environment:
+      - DB_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/user_db?sslmode=disable
+      - PORT=${USER_SERVICE_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  # --- PACKAGE SERVICE ---
+  package-db:
+    image: postgres:16-alpine
+    container_name: package_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: package_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${PACKAGE_DB_PORT}:5432"
+    volumes:
+      - package_db_data:/var/lib/postgresql/data
+      - ./services/package-service/initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d package_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  package-service:
+    build:
+      context: ./services/package-service
+      dockerfile: Dockerfile
+    container_name: package_service
+    restart: unless-stopped
+    ports:
+      - "${PACKAGE_SERVICE_PORT}:${PACKAGE_SERVICE_PORT}"
+    environment:
+      - DB_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@package-db:5432/package_db?sslmode=disable
+      - USER_SERVICE_URL=http://user-service:${USER_SERVICE_PORT}
+      - PORT=${PACKAGE_SERVICE_PORT}
+    depends_on:
+      package-db:
+        condition: service_healthy
+
+  # --- GAME SERVICE ---
+  game-db:
+    image: postgres:16-alpine
+    container_name: game_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: game_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${GAME_DB_PORT}:5432"
+    volumes:
+      - game_db_data:/var/lib/postgresql/data
+      - ./services/game-service/initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d game_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  game-service:
+    build:
+      context: ./services/game-service
+      dockerfile: Dockerfile
+    container_name: game_service
+    restart: unless-stopped
+    ports:
+      - "${GAME_SERVICE_PORT}:${GAME_SERVICE_PORT}"
+    environment:
+      - DB_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@game-db:5432/game_db?sslmode=disable
+      - USER_SERVICE_URL=http://user-service:${USER_SERVICE_PORT}
+      - PACKAGE_SERVICE_URL=http://package-service:${PACKAGE_SERVICE_PORT}
+      - PORT=${GAME_SERVICE_PORT}
+    depends_on:
+      game-db:
+        condition: service_healthy
+
+volumes:
+  user_db_data:
+  package_db_data:
+  game_db_data:
