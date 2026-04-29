@@ -48,7 +48,7 @@ export const Dashboard: React.FC = () => {
     { title: 'Total Games', value: games.length, icon: Gamepad2 },
     { title: 'Global Players', value: totalPlayers.toLocaleString(), icon: Users },
     { title: 'Active Right Now', value: activePlayers.toLocaleString(), icon: Activity },
-    { title: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: Banknote },
+    { title: 'Total Revenue', value: `฿${totalRevenue.toLocaleString()}`, icon: Banknote },
   ];
 
   return (

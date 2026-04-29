@@ -54,7 +54,7 @@ CREATE TABLE payments (
     user_id         INT NOT NULL,
     subscription_id INT NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
     amount          DECIMAL(10, 2) NOT NULL,
-    currency        VARCHAR(3) NOT NULL DEFAULT 'USD',
+    currency        VARCHAR(3) NOT NULL DEFAULT 'THB',
     payment_method  VARCHAR(50),
     status          VARCHAR(20) NOT NULL DEFAULT 'pending'
                     CHECK (status IN ('success', 'failed', 'pending', 'refunded')),

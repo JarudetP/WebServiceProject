@@ -394,7 +394,7 @@ func (h *Handler) RealtimeStream(c *gin.Context) {
 	c.Header("X-Accel-Buffering", "no")
 
 	clientGone := c.Request.Context().Done()
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(30 * time.Minute)
 	defer ticker.Stop()
 
 	sendEvent := func() bool {

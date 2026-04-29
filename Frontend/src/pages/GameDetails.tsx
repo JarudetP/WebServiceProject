@@ -207,7 +207,7 @@ export const GameDetails: React.FC = () => {
                  <h3 className="text-xs font-bold uppercase tracking-wider text-accent">Lifetime Revenue</h3>
                </div>
                <div className="flex items-end gap-1.5">
-                  <span className="text-5xl font-bold tracking-tighter text-foreground">${(game.revenue || 0).toLocaleString()}</span>
+                  <span className="text-5xl font-bold tracking-tighter text-foreground">฿{(game.revenue || 0).toLocaleString()}</span>
                </div>
                <p className="text-sm text-accent mt-3">Gross revenue across all channels.</p>
              </div>
@@ -215,7 +215,7 @@ export const GameDetails: React.FC = () => {
                <span className="px-3 py-1.5 mb-4 bg-green-50 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full border border-green-200 shadow-sm">
                  Profitable
                </span>
-               <span className="text-sm font-semibold text-accent">USD</span>
+               <span className="text-sm font-semibold text-accent">THB</span>
              </div>
           </div>
       </div>

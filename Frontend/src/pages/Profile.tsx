@@ -108,7 +108,7 @@ export const Profile: React.FC = () => {
     try {
       const result = await authService.topUp(user.id, amount);
       setUser({ ...user, balance: result.balance });
-      toast.success(`Added $${amount.toLocaleString()} to your balance`);
+      toast.success(`Added ฿${amount.toLocaleString()} to your balance`);
       setTopUpOpen(false);
       setTopUpAmount('');
     } catch (err: any) {
@@ -174,7 +174,7 @@ export const Profile: React.FC = () => {
                   <span className="text-sm text-accent">Balance</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-lg font-semibold tracking-tight">${user?.balance?.toLocaleString()}</span>
+                  <span className="text-lg font-semibold tracking-tight">฿{user?.balance?.toLocaleString()}</span>
                   <button
                     onClick={() => setTopUpOpen(true)}
                     className="px-3 py-1 bg-foreground text-background text-xs font-semibold rounded-lg hover:bg-foreground/80 transition-colors"
@@ -334,7 +334,7 @@ export const Profile: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <span className="text-2xl font-semibold tracking-tight">${pkg.price}</span>
+                    <span className="text-2xl font-semibold tracking-tight">฿{pkg.price}</span>
                     <button 
                       onClick={() => handlePurchase(pkg.id)}
                       className="px-4 py-2 bg-secondary text-foreground hover:bg-foreground hover:text-background text-sm font-medium rounded-lg transition-colors"
@@ -360,9 +360,9 @@ export const Profile: React.FC = () => {
               <h3 className="text-lg font-bold tracking-tight">Add Balance</h3>
             </div>
             <div className="mb-6">
-              <label className="text-xs font-bold text-accent uppercase tracking-wider block mb-2">Amount (USD)</label>
+              <label className="text-xs font-bold text-accent uppercase tracking-wider block mb-2">Amount (THB)</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-accent font-medium">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-accent font-medium">฿</span>
                 <input
                   type="number"
                   min="1"
@@ -382,7 +382,7 @@ export const Profile: React.FC = () => {
                     onClick={() => setTopUpAmount(String(preset))}
                     className="flex-1 py-1.5 text-xs font-semibold bg-secondary hover:bg-foreground hover:text-background rounded-lg transition-colors border border-border"
                   >
-                    ${preset}
+                    ฿{preset}
                   </button>
                 ))}
               </div>

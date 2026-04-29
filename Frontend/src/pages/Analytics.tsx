@@ -192,7 +192,7 @@ export const Analytics: React.FC = () => {
                       <td className="py-3 font-medium text-foreground">{r.name}</td>
                       <td className="py-3 text-accent">{r.genre}</td>
                       <td className="py-3 text-accent">{r.region}</td>
-                      <td className="py-3 font-semibold text-foreground text-right">${r.revenue.toLocaleString()}</td>
+                      <td className="py-3 font-semibold text-foreground text-right">฿{r.revenue.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -276,7 +276,7 @@ export const Analytics: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                <p className="text-xs text-accent text-center pt-1">Updates every 30 seconds</p>
+                <p className="text-xs text-accent text-center pt-1">Updates every 30 minutes</p>
               </div>
             )}
           </SectionShell>

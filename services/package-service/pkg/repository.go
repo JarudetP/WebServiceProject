@@ -96,7 +96,7 @@ func (r *Repository) GetActiveSubscription(userID int) (*Subscription, error) {
 
 func (r *Repository) RecordPayment(userID, subscriptionID int, amount float64, method, status string) error {
 	query := `INSERT INTO payments (user_id, subscription_id, amount, currency, payment_method, status, paid_at)
-		VALUES ($1, $2, $3, 'USD', $4, $5, NOW())`
+		VALUES ($1, $2, $3, 'THB', $4, $5, NOW())`
 	_, err := r.db.Exec(query, userID, subscriptionID, amount, method, status)
 	return err
 }

@@ -217,7 +217,7 @@ export const Games: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-accent">{game.platform}</td>
                     <td className="px-6 py-4 text-sm font-bold text-foreground text-right">{game.total_players.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-foreground text-right text-emerald-600">${game.revenue.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-foreground text-right text-emerald-600">฿{game.revenue.toLocaleString()}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1 px-2">
                         <button 
