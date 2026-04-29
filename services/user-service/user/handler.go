@@ -16,7 +16,7 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// POST /api/users/register
+//register
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -43,7 +43,7 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "registered successfully", "user": user})
 }
 
-// POST /api/users/login
+//login
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -66,7 +66,7 @@ func (h *Handler) Login(c *gin.Context) {
 	})
 }
 
-// GET /api/users/:id
+// GET :id
 func (h *Handler) GetProfile(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -83,7 +83,7 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// POST /api/users/:id/topup
+// POST:id/topup
 func (h *Handler) TopUp(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -182,8 +182,6 @@ func (h *Handler) DeleteAPIKey(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "API Key deleted successfully"})
 }
 
-// --- INTERNAL ROUTES (for inter-service calls) ---
-
 // POST /internal/users/:id/deduct
 func (h *Handler) InternalDeductBalance(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -280,7 +278,7 @@ func (h *Handler) GetUsageStats(c *gin.Context) {
 		return
 	}
 
-	stats, err := h.service.repo.GetUsageStats(id, 30) // Default 30 days
+	stats, err := h.service.repo.GetUsageStats(id, 30) 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

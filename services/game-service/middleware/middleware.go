@@ -117,7 +117,6 @@ func (m *Middleware) AuthAPIKey() gin.HandlerFunc {
 }
 
 func (m *Middleware) checkRateLimit(c *gin.Context, userID int) error {
-	// a. Get Active Subscription
 	subURL := fmt.Sprintf("%s/api/packages/subscription?user_id=%d", m.packageSvcURL, userID)
 	resp, err := http.Get(subURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -146,12 +145,10 @@ func (m *Middleware) checkRateLimit(c *gin.Context, userID int) error {
 	limit := int(pkg["request_limit"].(float64))
 	interval := int(pkg["refresh_interval_minutes"].(float64))
 
-	// Unlimited requests package, no need to check usage
 	if limit == -1 {
 		return nil
 	}
 
-	// c. Get Current Usage
 	usageURL := fmt.Sprintf("%s/internal/usage/count?user_id=%d&minutes=%d", m.userSvcURL, userID, interval)
 	resp, err = http.Get(usageURL)
 	if err != nil || resp.StatusCode != http.StatusOK {

@@ -16,6 +16,9 @@ export const Profile: React.FC = () => {
   const [usageData, setUsageData] = useState<{ date: string, count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpLoading, setTopUpLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -94,6 +97,27 @@ export const Profile: React.FC = () => {
     toast.success('Copied to clipboard');
   };
 
+  const handleTopUp = async () => {
+    if (!user) return;
+    const amount = parseFloat(topUpAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    setTopUpLoading(true);
+    try {
+      const result = await authService.topUp(user.id, amount);
+      setUser({ ...user, balance: result.balance });
+      toast.success(`Added $${amount.toLocaleString()} to your balance`);
+      setTopUpOpen(false);
+      setTopUpAmount('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Top-up failed');
+    } finally {
+      setTopUpLoading(false);
+    }
+  };
+
   const handleDeleteKey = async (keyStr: string) => {
     if (!user) return;
     try {
@@ -149,7 +173,15 @@ export const Profile: React.FC = () => {
                   <Wallet className="w-4 h-4 text-accent" />
                   <span className="text-sm text-accent">Balance</span>
                 </div>
-                <span className="text-lg font-semibold tracking-tight">${user?.balance?.toLocaleString()}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-semibold tracking-tight">${user?.balance?.toLocaleString()}</span>
+                  <button
+                    onClick={() => setTopUpOpen(true)}
+                    className="px-3 py-1 bg-foreground text-background text-xs font-semibold rounded-lg hover:bg-foreground/80 transition-colors"
+                  >
+                    + Add
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -317,6 +349,62 @@ export const Profile: React.FC = () => {
         </div>
 
       </div>
+      {/* Top-Up Modal */}
+      {topUpOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-secondary rounded-xl">
+                <Wallet className="w-5 h-5 text-foreground" />
+              </div>
+              <h3 className="text-lg font-bold tracking-tight">Add Balance</h3>
+            </div>
+            <div className="mb-6">
+              <label className="text-xs font-bold text-accent uppercase tracking-wider block mb-2">Amount (USD)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-accent font-medium">$</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  placeholder="0.00"
+                  value={topUpAmount}
+                  onChange={e => setTopUpAmount(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleTopUp()}
+                  className="w-full pl-8 pr-4 py-3 bg-secondary/50 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-foreground transition-all"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 mt-3">
+                {[10, 50, 100, 500].map(preset => (
+                  <button
+                    key={preset}
+                    onClick={() => setTopUpAmount(String(preset))}
+                    className="flex-1 py-1.5 text-xs font-semibold bg-secondary hover:bg-foreground hover:text-background rounded-lg transition-colors border border-border"
+                  >
+                    ${preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setTopUpOpen(false); setTopUpAmount(''); }}
+                className="flex-1 py-2.5 text-sm font-semibold text-accent hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTopUp}
+                disabled={topUpLoading || !topUpAmount}
+                className="flex-1 py-2.5 bg-foreground text-background text-sm font-bold rounded-xl hover:bg-foreground/90 transition-all disabled:opacity-50"
+              >
+                {topUpLoading ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };

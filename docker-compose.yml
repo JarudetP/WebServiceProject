@@ -106,6 +106,7 @@ services:
       - USER_SERVICE_URL=http://user-service:${USER_SERVICE_PORT}
       - PACKAGE_SERVICE_URL=http://package-service:${PACKAGE_SERVICE_PORT}
       - PORT=${GAME_SERVICE_PORT}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       game-db:
         condition: service_healthy

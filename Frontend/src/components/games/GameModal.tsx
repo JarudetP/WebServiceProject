@@ -38,7 +38,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onSave, g
         publisher: game.publisher,
         region: game.region
       });
-      setPreview(game.image_url.startsWith('http') ? game.image_url : `http://localhost:8080${game.image_url.startsWith('/') ? '' : '/'}${game.image_url}`);
+      setPreview(game.image_url.startsWith('http') ? game.image_url : `http://localhost:8083${game.image_url.startsWith('/') ? '' : '/'}${game.image_url}`);
     } else {
       setFormData({
         name: '',

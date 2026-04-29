@@ -90,7 +90,7 @@ export const GameDetails: React.FC = () => {
   if (!game) return null;
 
   const imageUrl = game.image_url 
-    ? (game.image_url.startsWith('http') ? game.image_url : `http://localhost:8080${game.image_url.startsWith('/') ? '' : '/'}${game.image_url}`)
+    ? (game.image_url.startsWith('http') ? game.image_url : `http://localhost:8083${game.image_url.startsWith('/') ? '' : '/'}${game.image_url}`)
     : '';
 
   return (

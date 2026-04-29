@@ -13,7 +13,6 @@ var DB *sql.DB
 func Connect() {
 	dsn := os.Getenv("DB_URL")
 	if dsn == "" {
-		// Localhost fallback for go run manually
 		dsn = "postgres://admin:admin1234@localhost:5431/user_db?sslmode=disable"
 	}
 

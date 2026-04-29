@@ -59,5 +59,10 @@ export const authService = {
   getUsageStats: async (userId: number): Promise<{ date: string, count: number }[]> => {
     const response = await api.get(`/users/${userId}/stats`);
     return response.data || [];
+  },
+
+  topUp: async (userId: number, amount: number): Promise<{ balance: number }> => {
+    const response = await api.post(`/users/${userId}/topup`, { amount });
+    return response.data;
   }
 };

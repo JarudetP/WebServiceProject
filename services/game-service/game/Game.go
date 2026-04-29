@@ -31,7 +31,6 @@ func NewHandler(db *sql.DB) *Handler {
 	return &Handler{db: db}
 }
 
-// generateFilename creates a random filename
 func generateFilename(ext string) string {
 	b := make([]byte, 16)
 	rand.Read(b)

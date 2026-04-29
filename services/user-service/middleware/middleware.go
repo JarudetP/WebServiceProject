@@ -71,7 +71,6 @@ func (m *Middleware) RequireJWT() gin.HandlerFunc {
 	}
 }
 
-// RequireSelf ensures the :id URL param matches the logged in user
 func (m *Middleware) RequireSelf() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		paramIDStr := c.Param("id")

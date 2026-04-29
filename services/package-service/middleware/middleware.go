@@ -15,12 +15,11 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-// RequireJWT validates the Bearer token
 func RequireJWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			c.Next() // Fallback to query param in handlers if JWT not present
+			c.Next() 
 			return
 		}
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")

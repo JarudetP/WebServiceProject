@@ -190,7 +190,7 @@ export const Games: React.FC = () => {
                         <div className="relative">
                           {game.image_url ? (
                             <img 
-                              src={game.image_url.startsWith('http') ? game.image_url : `http://localhost:8080${game.image_url.startsWith('/') ? '' : '/'}${game.image_url}`} 
+                              src={game.image_url.startsWith('http') ? game.image_url : `http://localhost:8083${game.image_url.startsWith('/') ? '' : '/'}${game.image_url}`}
                               alt={game.name} 
                               className="w-12 h-12 rounded-xl object-cover bg-secondary border border-border shadow-sm group-hover:scale-105 transition-transform"
                               onError={(e) => {

@@ -50,14 +50,14 @@ func main() {
 
 					hour := float64(recordedAt.Hour()) + float64(recordedAt.Minute())/60.0
 					
-					// Base 24h wave (Peak at 9 PM)
+
 					timeFactor := (hour - 15.0) * (2.0 * math.Pi / 24.0)
 					wave1 := math.Sin(timeFactor)
 					
-					// Higher frequency wave (6h cycle)
+
 					wave2 := 0.2 * math.Sin(hour * (2.0 * math.Pi / 6.0))
 					
-					// Even higher frequency (2h cycle)
+
 					wave3 := 0.1 * math.Sin(hour * (2.0 * math.Pi / 2.0))
 					
 					combinedWave := (wave1 + wave2 + wave3 + 1.3) / 2.6

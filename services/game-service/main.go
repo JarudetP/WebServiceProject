@@ -68,12 +68,10 @@ func main() {
 	api := r.Group("/api/games")
 	{
 		// Public API (Rate Limited by API Key)
-		public := api.Group("")
-		public.Use(mw.AuthAPIKey())
 		{
-			public.GET("", gameH.ListGames)
-			public.GET("/:id", gameH.GetGame)
-			public.GET("/:id/history", gameH.GetGameHistory)
+			api.GET("", mw.AuthAPIKey(), gameH.ListGames)
+			api.GET("/:id", mw.AuthAPIKey(), gameH.GetGame)
+			api.GET("/:id/history", mw.AuthAPIKey(), gameH.GetGameHistory)
 		}
 
 		// Admin API (Protected by JWT)
@@ -200,7 +198,6 @@ func startPlayerSimulator(dbConn *sql.DB) {
 		}
 	}
 
-	// Run once immediately on startup
 	simulate()
 
 	ticker := time.NewTicker(30 * time.Minute)

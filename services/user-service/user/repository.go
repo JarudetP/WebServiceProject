@@ -89,7 +89,6 @@ func (r *Repository) FindByAPIKey(apiKey string) (int, int, string, error) {
 }
 
 func (r *Repository) CreateAPIKey(userID int) (string, error) {
-	// Generate a 32-character random key
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "", err

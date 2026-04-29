@@ -39,7 +39,6 @@ func (s *Service) Purchase(userID, packageID int) (*Subscription, error) {
 	var isUpgrade bool
 	var isRenewal bool
 
-	// Default duration is 1 day for dev
 	const devDuration = 24 * time.Hour
 
 	if activeSub == nil {
@@ -64,7 +63,7 @@ func (s *Service) Purchase(userID, packageID int) (*Subscription, error) {
 		}
 	}
 
-	// Deduct balance via User Service (Inter-service call)
+
 	if err := s.deductUserBalance(userID, amountToPay); err != nil {
 		return nil, fmt.Errorf("insufficient balance or user-service error: %v", err)
 	}
@@ -92,7 +91,7 @@ func (s *Service) Purchase(userID, packageID int) (*Subscription, error) {
 		}
 	}
 
-	// Record payment
+
 	method := "wallet_purchase"
 	if isUpgrade {
 		method = "wallet_upgrade"
@@ -108,7 +107,7 @@ func (s *Service) GetActiveSubscription(userID int) (*Subscription, error) {
 	return s.repo.GetActiveSubscription(userID)
 }
 
-// deductUserBalance calls user-service internal API
+
 func (s *Service) deductUserBalance(userID int, amount float64) error {
 	url := fmt.Sprintf("%s/internal/users/%d/deduct", s.userSvcURL, userID)
 	
