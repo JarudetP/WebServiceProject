@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -235,14 +237,22 @@ func (h *Handler) DeleteGame(c *gin.Context) {
 // GET /api/games/:id/history
 func (h *Handler) GetGameHistory(c *gin.Context) {
 	id := c.Param("id")
+
+	days := 7
+	if val, exists := c.Get("historical_data_days"); exists {
+		if d, ok := val.(int); ok && d > 0 {
+			days = d
+		}
+	}
+
 	rows, err := h.db.Query(`
-		SELECT game_id, total_players, current_players, recorded_at 
-		FROM game_player_history 
-		WHERE game_id = $1 
-		AND recorded_at >= NOW() - INTERVAL '7 days'
+		SELECT game_id, total_players, current_players, recorded_at
+		FROM game_player_history
+		WHERE game_id = $1
+		AND recorded_at >= NOW() - make_interval(days => $2)
 		ORDER BY recorded_at ASC
-	`, id)
-	
+	`, id, days)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch history"})
 		return
@@ -260,4 +270,173 @@ func (h *Handler) GetGameHistory(c *gin.Context) {
 		history = append(history, hi)
 	}
 	c.JSON(http.StatusOK, history)
+}
+
+// GET /api/games/analytics/genre  (requires has_genre_analytics)
+func (h *Handler) GenreAnalytics(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT genre, COUNT(*) AS game_count,
+		       SUM(total_players) AS total_players,
+		       SUM(current_players) AS current_players,
+		       SUM(revenue) AS total_revenue
+		FROM games
+		GROUP BY genre
+		ORDER BY total_players DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch genre analytics"})
+		return
+	}
+	defer rows.Close()
+
+	var results []GenreAnalytic
+	for rows.Next() {
+		var g GenreAnalytic
+		if err := rows.Scan(&g.Genre, &g.GameCount, &g.TotalPlayers, &g.CurrentPlayers, &g.TotalRevenue); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse genre data"})
+			return
+		}
+		results = append(results, g)
+	}
+	c.JSON(http.StatusOK, results)
+}
+
+// GET /api/games/analytics/revenue  (requires has_revenue_analytics)
+func (h *Handler) RevenueAnalytics(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT id, name, genre, region, platform, revenue
+		FROM games
+		ORDER BY revenue DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch revenue analytics"})
+		return
+	}
+	defer rows.Close()
+
+	var results []RevenueEntry
+	for rows.Next() {
+		var r RevenueEntry
+		if err := rows.Scan(&r.ID, &r.Name, &r.Genre, &r.Region, &r.Platform, &r.Revenue); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse revenue data"})
+			return
+		}
+		results = append(results, r)
+	}
+	c.JSON(http.StatusOK, results)
+}
+
+// GET /api/games/analytics/region  (requires has_region_breakdown)
+func (h *Handler) RegionBreakdown(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT region, COUNT(*) AS game_count,
+		       SUM(total_players) AS total_players,
+		       SUM(current_players) AS current_players,
+		       SUM(revenue) AS total_revenue
+		FROM games
+		GROUP BY region
+		ORDER BY total_players DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch region breakdown"})
+		return
+	}
+	defer rows.Close()
+
+	var results []RegionAnalytic
+	for rows.Next() {
+		var r RegionAnalytic
+		if err := rows.Scan(&r.Region, &r.GameCount, &r.TotalPlayers, &r.CurrentPlayers, &r.TotalRevenue); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse region data"})
+			return
+		}
+		results = append(results, r)
+	}
+	c.JSON(http.StatusOK, results)
+}
+
+// GET /api/games/export  (requires has_bulk_export)
+func (h *Handler) BulkExport(c *gin.Context) {
+	rows, err := h.db.Query(`
+		SELECT id, name, total_players, current_players, revenue, genre, region,
+		       platform, publisher, developer, image_url, timestamp, created_at, updated_at
+		FROM games
+		ORDER BY id ASC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to export games"})
+		return
+	}
+	defer rows.Close()
+
+	var games []Game
+	for rows.Next() {
+		var g Game
+		if err := rows.Scan(&g.ID, &g.Name, &g.TotalPlayers, &g.CurrentPlayers, &g.Revenue,
+			&g.Genre, &g.Region, &g.Platform, &g.Publisher, &g.Developer,
+			&g.ImageURL, &g.Timestamp, &g.CreatedAt, &g.UpdatedAt); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse game data"})
+			return
+		}
+		games = append(games, g)
+	}
+
+	c.Header("Content-Disposition", "attachment; filename=games_export.json")
+	c.JSON(http.StatusOK, games)
+}
+
+// GET /api/games/stream  (requires has_realtime_stream)
+// Server-Sent Events — pushes live game data every 30 seconds.
+func (h *Handler) RealtimeStream(c *gin.Context) {
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+
+	clientGone := c.Request.Context().Done()
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	sendEvent := func() bool {
+		rows, err := h.db.Query(`
+			SELECT id, name, total_players, current_players, revenue, genre, region,
+			       platform, publisher, developer, image_url, timestamp, created_at, updated_at
+			FROM games
+		`)
+		if err != nil {
+			return false
+		}
+		defer rows.Close()
+
+		var games []Game
+		for rows.Next() {
+			var g Game
+			if err := rows.Scan(&g.ID, &g.Name, &g.TotalPlayers, &g.CurrentPlayers, &g.Revenue,
+				&g.Genre, &g.Region, &g.Platform, &g.Publisher, &g.Developer,
+				&g.ImageURL, &g.Timestamp, &g.CreatedAt, &g.UpdatedAt); err != nil {
+				return false
+			}
+			games = append(games, g)
+		}
+
+		data, _ := json.Marshal(games)
+		fmt.Fprintf(c.Writer, "data: %s\n\n", data)
+		c.Writer.(http.Flusher).Flush()
+		return true
+	}
+
+	if !sendEvent() {
+		return
+	}
+
+	for {
+		select {
+		case <-clientGone:
+			return
+		case <-ticker.C:
+			if !sendEvent() {
+				return
+			}
+		}
+	}
 }

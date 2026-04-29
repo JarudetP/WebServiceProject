@@ -36,3 +36,28 @@ export interface ApiKey {
   created_at: string;
   is_active: boolean;
 }
+
+export interface GenreAnalytic {
+  genre: string;
+  game_count: number;
+  total_players: number;
+  current_players: number;
+  total_revenue: number;
+}
+
+export interface RegionAnalytic {
+  region: string;
+  game_count: number;
+  total_players: number;
+  current_players: number;
+  total_revenue: number;
+}
+
+export interface RevenueEntry {
+  id: number;
+  name: string;
+  genre: string;
+  region: string;
+  platform: string;
+  revenue: number;
+}

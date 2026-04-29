@@ -1,5 +1,5 @@
 import { gameApi as api } from './api';
-import type { Game } from '../types';
+import type { Game, GenreAnalytic, RegionAnalytic, RevenueEntry } from '../types';
 
 export const gameService = {
   getGames: async (): Promise<Game[]> => {
@@ -36,5 +36,20 @@ export const gameService = {
 
   deleteGame: async (id: number): Promise<void> => {
     await api.delete(`/games/${id}`);
-  }
+  },
+
+  getGenreAnalytics: async (): Promise<GenreAnalytic[]> => {
+    const response = await api.get('/games/analytics/genre');
+    return response.data || [];
+  },
+
+  getRevenueAnalytics: async (): Promise<RevenueEntry[]> => {
+    const response = await api.get('/games/analytics/revenue');
+    return response.data || [];
+  },
+
+  getRegionBreakdown: async (): Promise<RegionAnalytic[]> => {
+    const response = await api.get('/games/analytics/region');
+    return response.data || [];
+  },
 };

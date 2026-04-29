@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Gamepad2, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, Gamepad2, LogOut, User, BarChart2 } from 'lucide-react';
 import { authService } from '../../services/auth.service';
 import toast from 'react-hot-toast';
 
@@ -16,6 +16,7 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Games', path: '/games', icon: Gamepad2 },
+    { name: 'Analytics', path: '/analytics', icon: BarChart2 },
     { name: 'Profile', path: '/profile', icon: User },
   ];
 

@@ -68,11 +68,16 @@ func main() {
 	api := r.Group("/api/games")
 	{
 		// Public API (Rate Limited by API Key)
-		{
-			api.GET("", mw.AuthAPIKey(), gameH.ListGames)
-			api.GET("/:id", mw.AuthAPIKey(), gameH.GetGame)
-			api.GET("/:id/history", mw.AuthAPIKey(), gameH.GetGameHistory)
-		}
+		api.GET("", mw.AuthAPIKey(), gameH.ListGames)
+		api.GET("/:id", mw.AuthAPIKey(), gameH.GetGame)
+		api.GET("/:id/history", mw.AuthAPIKey(), gameH.GetGameHistory)
+
+		// Feature-gated endpoints (API Key + package feature check)
+		api.GET("/export", mw.AuthAPIKey(), mw.RequireFeature("has_bulk_export"), gameH.BulkExport)
+		api.GET("/stream", mw.AuthAPIKey(), mw.RequireFeature("has_realtime_stream"), gameH.RealtimeStream)
+		api.GET("/analytics/genre", mw.AuthAPIKey(), mw.RequireFeature("has_genre_analytics"), gameH.GenreAnalytics)
+		api.GET("/analytics/revenue", mw.AuthAPIKey(), mw.RequireFeature("has_revenue_analytics"), gameH.RevenueAnalytics)
+		api.GET("/analytics/region", mw.AuthAPIKey(), mw.RequireFeature("has_region_breakdown"), gameH.RegionBreakdown)
 
 		// Admin API (Protected by JWT)
 		admin := api.Group("")

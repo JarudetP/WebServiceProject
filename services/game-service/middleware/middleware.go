@@ -72,7 +72,20 @@ func (m *Middleware) Admin() gin.HandlerFunc {
 	}
 }
 
-// AuthAPIKey validates X-API-Key and enforces rate limits
+// RequireFeature blocks requests if the feature flag (stored in context by AuthAPIKey) is false.
+func (m *Middleware) RequireFeature(featureKey string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		val, exists := c.Get(featureKey)
+		if !exists || val == false {
+			c.JSON(http.StatusForbidden, gin.H{"error": "your current plan does not include this feature"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// AuthAPIKey validates X-API-Key, loads package features into context, and enforces rate limits.
 func (m *Middleware) AuthAPIKey() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-API-Key")
@@ -101,9 +114,8 @@ func (m *Middleware) AuthAPIKey() gin.HandlerFunc {
 		c.Set("user_id", keyData.UserID)
 		c.Set("api_key_id", keyData.APIKeyID)
 
-		// 2. Rate Limit Check
-		// Need subscription -> package details -> current usage
-		if err := m.checkRateLimit(c, keyData.UserID); err != nil {
+		// 2. Load package features into context + rate limit check
+		if err := m.loadAndCheckPackage(c, keyData.UserID); err != nil {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
 			c.Abort()
 			return
@@ -116,7 +128,8 @@ func (m *Middleware) AuthAPIKey() gin.HandlerFunc {
 	}
 }
 
-func (m *Middleware) checkRateLimit(c *gin.Context, userID int) error {
+func (m *Middleware) loadAndCheckPackage(c *gin.Context, userID int) error {
+	// a. Get active subscription
 	subURL := fmt.Sprintf("%s/api/packages/subscription?user_id=%d", m.packageSvcURL, userID)
 	resp, err := http.Get(subURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -132,7 +145,7 @@ func (m *Middleware) checkRateLimit(c *gin.Context, userID int) error {
 
 	packageID := int(sub["package_id"].(float64))
 
-	// b. Get Package Details
+	// b. Get package details
 	pkgURL := fmt.Sprintf("%s/api/packages/%d", m.packageSvcURL, packageID)
 	resp, err = http.Get(pkgURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -142,6 +155,15 @@ func (m *Middleware) checkRateLimit(c *gin.Context, userID int) error {
 	json.NewDecoder(resp.Body).Decode(&pkg)
 	resp.Body.Close()
 
+	// c. Store feature flags in context for handlers and RequireFeature middleware
+	c.Set("historical_data_days", int(pkg["historical_data_days"].(float64)))
+	c.Set("has_genre_analytics", pkg["has_genre_analytics"].(bool))
+	c.Set("has_revenue_analytics", pkg["has_revenue_analytics"].(bool))
+	c.Set("has_region_breakdown", pkg["has_region_breakdown"].(bool))
+	c.Set("has_bulk_export", pkg["has_bulk_export"].(bool))
+	c.Set("has_realtime_stream", pkg["has_realtime_stream"].(bool))
+
+	// d. Check rate limit
 	limit := int(pkg["request_limit"].(float64))
 	interval := int(pkg["refresh_interval_minutes"].(float64))
 

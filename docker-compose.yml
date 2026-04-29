@@ -107,6 +107,8 @@ services:
       - PACKAGE_SERVICE_URL=http://package-service:${PACKAGE_SERVICE_PORT}
       - PORT=${GAME_SERVICE_PORT}
       - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - game_uploads:/app/uploads
     depends_on:
       game-db:
         condition: service_healthy
@@ -115,3 +117,4 @@ volumes:
   user_db_data:
   package_db_data:
   game_db_data:
+  game_uploads:

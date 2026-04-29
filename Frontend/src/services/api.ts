@@ -5,6 +5,8 @@ const USER_API_URL = import.meta.env.VITE_USER_API_URL || 'http://localhost:8081
 const PACKAGE_API_URL = import.meta.env.VITE_PACKAGE_API_URL || 'http://localhost:8082/api';
 const GAME_API_URL = import.meta.env.VITE_GAME_API_URL || 'http://localhost:8083/api';
 
+export const GAME_API_BASE = GAME_API_URL;
+
 const createInstance = (baseURL: string): AxiosInstance => {
   return axios.create({
     baseURL: baseURL,

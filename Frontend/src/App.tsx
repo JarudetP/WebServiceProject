@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Games } from './pages/Games';
 import { GameDetails } from './pages/GameDetails';
 import { Profile } from './pages/Profile';
+import { Analytics } from './pages/Analytics';
 import { getAuthToken } from './services/api';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -75,6 +76,12 @@ function App() {
         <Route path="/profile" element={
           <PrivateRoute>
             <Profile />
+          </PrivateRoute>
+        } />
+
+        <Route path="/analytics" element={
+          <PrivateRoute>
+            <Analytics />
           </PrivateRoute>
         } />
         
